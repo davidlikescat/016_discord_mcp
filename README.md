@@ -1,5 +1,7 @@
 # 🔔 Claude Code Discord Notifier
 
+[English Version (영문 버전)](README_EN.md)
+
 Claude Code 작업 완료 시 Discord로 자동 알림을 보내는 MCP 기반 시스템입니다.
 
 ## ✨ 주요 기능
