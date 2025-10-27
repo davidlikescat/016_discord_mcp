@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "discord-notifier": {
+      "command": "python3",
+      "args": [
+        "-m",
+        "src.discord_webhook"
+      ],
+      "env": {
+        "DISCORD_WEBHOOK_URL": "${DISCORD_WEBHOOK_URL}"
+      }
+    }
+  },
+  "notifications": {
+    "task_complete": {
+      "enabled": true,
+      "message_type": "task_complete"
+    },
+    "build_complete": {
+      "enabled": true,
+      "message_type": "build_complete"
+    },
+    "user_decision": {
+      "enabled": true,
+      "message_type": "user_decision"
+    },
+    "error": {
+      "enabled": true,
+      "message_type": "error"
+    }
+  }
+}
