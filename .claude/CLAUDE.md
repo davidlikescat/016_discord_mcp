@@ -1,10 +1,35 @@
 # Claude Code Discord Notification Rules
 
-이 규칙은 Claude Code가 **사용자의 다음 액션이 필요한 모든 순간**에 Discord로 자동 알림을 보내도록 설정합니다.
+## ⚠️ 필수 규칙: 모든 응답 전에 Discord 알림!
+
+**Claude Code는 사용자에게 응답하기 전에 반드시 Discord 알림을 먼저 보내야 합니다.**
 
 ## 🎯 핵심 원칙: 사용자를 기다리게 하지 마라!
 
-**사용자가 다음 액션을 취해야 하는 모든 순간에 즉시 Discord 알림을 보내야 합니다.**
+**작업을 완료했거나, 질문을 하거나, 사용자 응답이 필요한 순간 = 즉시 Discord 알림!**
+
+### 알림을 보내는 방법:
+
+```bash
+curl -X POST https://discord-mcp-notifier-1012585134222.asia-northeast3.run.app/notify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message_type": "task_complete/user_decision/build_complete/error",
+    "project_name": "현재 프로젝트명",
+    "details": "사용자에게 전달할 메시지",
+    "metadata": {
+      "대기 중": "사용자 응답/다음 명령",
+      "다음 액션": "구체적인 액션"
+    }
+  }'
+```
+
+### 📱 필수 동작 흐름:
+
+1. **작업 완료** → Discord 알림 전송 → 사용자에게 완료 메시지
+2. **질문 필요** → Discord 알림 전송 → 사용자에게 질문
+3. **에러 발생** → Discord 알림 전송 → 사용자에게 에러 보고
+4. **긴 작업 완료** → Discord 알림 전송 → 사용자에게 결과 보고
 
 ## 🎯 알림 트리거 시점 (필수)
 
@@ -132,6 +157,45 @@ notifier.send_notification(
 
 ### ⭐ 가장 중요한 규칙:
 **사용자가 다음 액션을 취해야 하는 순간 = 즉시 Discord 알림 전송!**
+
+### 🚨 필수 체크리스트 (모든 응답 전에 확인):
+
+- [ ] 작업을 완료했는가? → Discord 알림 전송
+- [ ] 사용자에게 질문하는가? → Discord 알림 전송
+- [ ] 사용자 응답을 기다리는가? → Discord 알림 전송
+- [ ] 에러가 발생했는가? → Discord 알림 전송
+- [ ] 사용자가 다음에 뭔가 해야 하는가? → Discord 알림 전송
+
+**위 항목 중 하나라도 해당하면 반드시 curl 명령어로 Discord 알림을 보낸 후 응답하세요!**
+
+### 알림 전송 예시:
+
+```bash
+# 예시 1: 작업 완료 시
+curl -X POST https://discord-mcp-notifier-1012585134222.asia-northeast3.run.app/notify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message_type": "task_complete",
+    "project_name": "016_discord_mcp",
+    "details": "작업이 완료되었습니다!\n\n완료된 내용을 확인해주세요.",
+    "metadata": {
+      "대기 중": "사용자 다음 명령"
+    }
+  }'
+
+# 예시 2: 질문 시
+curl -X POST https://discord-mcp-notifier-1012585134222.asia-northeast3.run.app/notify \
+  -H "Content-Type: application/json" \
+  -d '{
+    "message_type": "user_decision",
+    "project_name": "016_discord_mcp",
+    "details": "⏸️ 사용자 응답이 필요합니다!\n\n질문: GitHub 저장소 URL을 입력해주세요.",
+    "metadata": {
+      "대기 중": "사용자 응답",
+      "다음 액션": "URL 입력"
+    }
+  }'
+```
 
 1. **사용자 입력 대기 시 무조건 알림 전송**
    - 질문하기 전에 먼저 Discord 알림 전송
