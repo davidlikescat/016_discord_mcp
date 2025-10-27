@@ -1,10 +1,14 @@
 # Claude Code Discord Notification Rules
 
-이 규칙은 Claude Code가 작업 완료 시 Discord로 자동 알림을 보내도록 설정합니다.
+이 규칙은 Claude Code가 **사용자의 다음 액션이 필요한 모든 순간**에 Discord로 자동 알림을 보내도록 설정합니다.
 
-## 🎯 알림 트리거 시점
+## 🎯 핵심 원칙: 사용자를 기다리게 하지 마라!
 
-Claude Code는 다음 상황에서 Discord 알림을 자동으로 전송해야 합니다:
+**사용자가 다음 액션을 취해야 하는 모든 순간에 즉시 Discord 알림을 보내야 합니다.**
+
+## 🎯 알림 트리거 시점 (필수)
+
+Claude Code는 다음 상황에서 Discord 알림을 **반드시** 자동으로 전송해야 합니다:
 
 ### 1. 작업 완료 (Task Complete)
 - 사용자가 요청한 코딩 작업이 완료되었을 때
@@ -80,38 +84,143 @@ notifier.send_notification(
 )
 ```
 
-## 📋 일반 규칙
+### 5. 사용자 입력 대기 중 (User Action Required) ⭐ 중요!
+- **사용자에게 질문하거나 확인을 요청할 때**
+- **사용자가 설정해야 할 것이 있을 때**
+- **사용자가 외부에서 작업해야 할 때** (예: GitHub 저장소 생성, API 키 발급 등)
+- **다음 단계를 진행하기 전에 사용자 응답이 필요할 때**
 
-1. **알림은 작업이 완전히 완료된 후에만 전송**
-   - 중간 단계에서는 알림을 보내지 않음
+**예시:**
+- "GitHub 저장소 URL을 알려주세요"
+- "Discord Webhook URL을 설정해야 합니다"
+- "Docker를 설치해야 합니다"
+- "GCP 프로젝트 ID를 입력해주세요"
+- "브라우저에서 인증을 완료해주세요"
+
+**알림 방법:**
+```python
+notifier.send_notification(
+    message_type="user_decision",
+    project_name="프로젝트명",
+    details="사용자가 해야 할 작업 설명\n\n예: GitHub에서 저장소를 생성하고 URL을 알려주세요",
+    metadata={
+        "대기 중": "사용자 응답",
+        "다음 단계": "구체적인 액션"
+    }
+)
+```
+
+### 6. 진행 상황 업데이트 (Progress Update)
+- 긴 작업(1분 이상) 진행 중일 때
+- 중요한 단계가 완료되었을 때
+- 사용자가 진행 상황을 알아야 할 때
+
+**알림 방법:**
+```python
+notifier.send_notification(
+    message_type="build_complete",
+    project_name="프로젝트명",
+    details="현재 진행 중: Docker 이미지 빌드 중...",
+    metadata={
+        "진행률": "50%",
+        "예상 시간": "1분 남음"
+    }
+)
+```
+
+## 📋 일반 규칙 (반드시 준수)
+
+### ⭐ 가장 중요한 규칙:
+**사용자가 다음 액션을 취해야 하는 순간 = 즉시 Discord 알림 전송!**
+
+1. **사용자 입력 대기 시 무조건 알림 전송**
+   - 질문하기 전에 먼저 Discord 알림 전송
+   - 사용자가 터미널을 보지 않아도 Discord에서 확인 가능
+   - 예: "GitHub 저장소 URL을 입력해주세요" → Discord 알림 먼저 전송
+
+2. **작업 완료 시 항상 알림 전송**
    - 모든 파일 저장 및 검증이 완료된 후 전송
+   - 사용자가 다음에 무엇을 해야 하는지 명확히 안내
 
-2. **프로젝트 이름은 현재 작업 중인 디렉토리명 사용**
+3. **프로젝트 이름은 현재 작업 중인 디렉토리명 사용**
    ```python
    import os
    project_name = os.path.basename(os.getcwd())
    ```
 
-3. **메타데이터는 가능한 한 구체적으로 제공**
+4. **메타데이터는 가능한 한 구체적으로 제공**
    - 실행 시간, 처리된 파일 수, 에러 정보 등
    - 사용자가 작업 결과를 바로 이해할 수 있도록
+   - **다음 액션이 무엇인지 반드시 포함**
 
-4. **긴 작업(10분 이상)은 진행률 알림 고려**
-   - 25%, 50%, 75% 시점에 간단한 진행률 메시지 전송 (선택사항)
+5. **긴 작업(1분 이상)은 진행률 알림 필수**
+   - 작업 시작 시 알림
+   - 50% 완료 시 알림
+   - 작업 완료 시 알림
+   - 사용자가 대기 시간을 알 수 있도록
 
-5. **에러 발생 시에도 알림 전송**
+6. **에러 발생 시에도 즉시 알림 전송**
    - 사용자가 빠르게 문제를 인지할 수 있도록
+   - 해결 방법도 함께 안내
 
 ## 🔧 환경 설정
+
+### 방법 1: 로컬에서 직접 실행 (개발 환경)
 
 Discord Webhook URL은 `.env` 파일에서 읽어옵니다:
 
 ```python
 import os
 from dotenv import load_dotenv
+from src.discord_webhook import DiscordNotifier
 
 load_dotenv()
 WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
+notifier = DiscordNotifier(WEBHOOK_URL)
+```
+
+### 방법 2: GCP Cloud Run API 사용 (프로덕션) ⭐ 권장
+
+**이미 배포된 Cloud Run 서비스를 사용하세요!**
+
+```python
+import requests
+import os
+
+# GCP Cloud Run 서비스 URL
+CLOUD_RUN_URL = "https://discord-mcp-notifier-1012585134222.asia-northeast3.run.app/notify"
+
+def send_discord_notification(message_type, project_name, details, metadata):
+    """GCP Cloud Run을 통해 Discord 알림 전송"""
+    try:
+        response = requests.post(
+            CLOUD_RUN_URL,
+            json={
+                "message_type": message_type,
+                "project_name": project_name,
+                "details": details,
+                "metadata": metadata
+            },
+            timeout=10
+        )
+        if response.status_code == 200:
+            print(f"✅ Discord 알림 전송 성공: {message_type}")
+            return True
+        else:
+            print(f"❌ Discord 알림 전송 실패: {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"❌ Discord 알림 전송 오류: {e}")
+        return False
+
+# 사용 예시
+project_name = os.path.basename(os.getcwd())
+send_discord_notification(
+    message_type="task_complete",
+    project_name=project_name,
+    details="작업 완료!",
+    metadata={"상태": "SUCCESS"}
+)
 ```
 
 ## 예시 시나리오
@@ -152,7 +261,7 @@ notifier.send_notification(
 ### 시나리오 3: 데이터베이스 마이그레이션 확인 필요
 ```python
 # 마이그레이션 실행 전
-notifier.send_notification(
+send_discord_notification(
     message_type="user_decision",
     project_name="database-migration",
     details="다음 마이그레이션을 실행하시겠습니까?\n\n• users 테이블에 email_verified 컬럼 추가\n• posts 테이블 인덱스 재구성\n• 예상 소요 시간: 5-10분",
@@ -160,6 +269,61 @@ notifier.send_notification(
         "마이그레이션 파일": "20251027_add_email_verification.sql",
         "영향받는 테이블": "users, posts",
         "위험도": "중간"
+    }
+)
+```
+
+### 시나리오 4: 사용자 입력 필요 ⭐ 가장 중요!
+```python
+# 사용자에게 GitHub 저장소 URL을 물어보기 전에 먼저 Discord 알림 전송
+send_discord_notification(
+    message_type="user_decision",
+    project_name=os.path.basename(os.getcwd()),
+    details="⏸️ 사용자 입력이 필요합니다!\n\nGitHub 저장소 URL을 입력해주세요.\n\n예시: https://github.com/username/repo-name",
+    metadata={
+        "대기 중": "GitHub 저장소 URL",
+        "다음 액션": "터미널에 URL 입력",
+        "상태": "입력 대기 중..."
+    }
+)
+
+# 그 다음에 사용자에게 질문
+github_url = input("GitHub 저장소 URL을 입력하세요: ")
+```
+
+### 시나리오 5: Docker 설치 필요
+```python
+# Docker가 없을 때
+send_discord_notification(
+    message_type="user_decision",
+    project_name=os.path.basename(os.getcwd()),
+    details="⚠️ Docker가 설치되어 있지 않습니다!\n\n다음 중 하나를 선택해주세요:\n\n1. Docker Desktop 설치 (https://www.docker.com/products/docker-desktop)\n2. Cloud Build 사용 (Docker 없이 GCP에서 빌드)\n\n터미널에서 선택해주세요!",
+    metadata={
+        "필요한 것": "Docker 또는 대안 선택",
+        "옵션 1": "Docker Desktop 설치",
+        "옵션 2": "Cloud Build 사용",
+        "대기 중": "사용자 선택"
+    }
+)
+
+# 사용자에게 선택 요청
+print("\n1. Docker 설치하기")
+print("2. Cloud Build 사용하기")
+choice = input("선택하세요 (1/2): ")
+```
+
+### 시나리오 6: GCP 배포 완료 후 테스트 필요
+```python
+# 배포 완료 후
+send_discord_notification(
+    message_type="task_complete",
+    project_name=os.path.basename(os.getcwd()),
+    details="🎉 GCP Cloud Run 배포 완료!\n\n✅ 서비스 URL: https://your-service.run.app\n✅ 헬스체크 통과\n✅ Secret Manager 설정 완료\n\n다음 액션: Discord 채널에서 테스트 알림을 확인하세요!",
+    metadata={
+        "서비스 URL": "https://your-service.run.app",
+        "상태": "ACTIVE",
+        "다음 액션": "Discord에서 알림 확인",
+        "테스트 방법": "curl 명령어 제공됨"
     }
 )
 ```
